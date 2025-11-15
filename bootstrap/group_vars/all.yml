@@ -1,0 +1,35 @@
+---
+
+clickhouse:
+  database: "logs"
+  table: "logs_raw"
+  compression: "gzip"
+  clickhouse_users_custom:
+    - name: clickhouse
+      password: ".clickhouse"
+      networks: "{{ ansible_default_ipv4.address | map('regex_replace', '\\.\\d+$', '.0/24') | list }}"
+      profile: "default"
+      quota: "default"
+      comment: "test user for clickhouse"
+
+  create_db: >
+    clickhouse-client 
+      --host={{ ansible_default_ipv4.address | default('0.0.0.0') }} 
+      -q 'CREATE DATABASE IF NOT EXISTS {{ clickhouse.database }};'
+  create_table: >
+    clickhouse-client 
+      --host={{ ansible_default_ipv4.address | default('0.0.0.0') }} 
+      --database={{ clickhouse.database }} 
+      -q 'CREATE TABLE IF NOT EXISTS {{ clickhouse.table }} 
+      ( ts DateTime64(3) DEFAULT now(), 
+      message String, 
+      level Nullable(String), 
+      host Nullable(String), 
+      service Nullable(String), 
+      raw_event String ) 
+      ENGINE = MergeTree() PARTITION BY toYYYYMM(ts) ORDER BY (ts);'
+      
+vector:
+  sources_files_custom:
+    - "/var/log/auth.log"
+    - "/var/log/syslog"

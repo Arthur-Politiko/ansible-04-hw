@@ -1,0 +1,9 @@
+---
+- name: Install Lighthouse
+  hosts: clickhouse
+  #tags: ["vector"]
+  gather_facts: false
+  # vars:
+  #   vector_sources_files: "{{ vector_sources_files_custom | default([]) }}"
+  roles:
+    - roles/lighthouse

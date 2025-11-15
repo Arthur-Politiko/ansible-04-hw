@@ -1,0 +1,9 @@
+---
+- name: Install vector
+  hosts: vector
+  #tags: ["vector"]
+  gather_facts: false
+  vars:
+    vector_sources_files: "{{ vector_sources_files_custom | default([]) }}"
+  roles:
+    - roles/vector                # Просто имя роли 

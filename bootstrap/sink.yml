@@ -1,0 +1,13 @@
+---
+- name: Create db schema
+  hosts: clickhouse
+  #tags: ["sink", "sink.create_table"]
+  gather_facts: false
+  tasks:
+    - name: Sink | Create table
+      become: true
+      ansible.builtin.command: "{{ clickhouse_commands.create_table }}"
+      register: create_table
+      failed_when: create_table.rc != 0 and create_table.rc != 57
+      changed_when: create_table.rc == 0
+

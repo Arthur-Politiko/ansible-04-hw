@@ -1,0 +1,27 @@
+FROM ubuntu:24.04
+
+#RUN sed -i '/^[^#]/ s/^/#/' /etc/apt/sources.list.d/ubuntu.sources
+#RUN rm /etc/apt/sources.list.d/ubuntu.sources
+
+RUN rm /etc/apt/sources.list.d/ubuntu.sources \
+    && cat > /etc/apt/sources.list <<'EOF' 
+    deb http://archive.ubuntu.com/ubuntu noble main universe multiverse restricted
+    deb http://archive.ubuntu.com/ubuntu noble-updates main universe multiverse restricted
+    deb http://archive.ubuntu.com/ubuntu noble-security main universe multiverse restricted
+EOF
+
+# Установка необходимых пакетов
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends openssh-server python3 python3-apt sudo ca-certificates \
+ && apt-get install -y iproute2 iputils-ping gnupg \
+ && rm -rf /var/lib/apt/lists/*
+
+# Подготовить sudo и ssh
+RUN usermod -aG sudo ubuntu \
+ && echo "ubuntu ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ubuntu \
+ && mkdir -p /var/run/sshd /home/ubuntu/.ssh \
+ && chown -R ubuntu:ubuntu /home/ubuntu/.ssh && chmod 700 /home/ubuntu/.ssh
+
+EXPOSE 22 
+
+WORKDIR /app/

@@ -1,0 +1,90 @@
+resource "docker_network" "private_network" {
+  name = "develop_net"
+  internal = true
+  #driver = "bridge"
+}
+
+resource "docker_network" "public_network" {
+  name = "jumphost_net"
+  internal = false
+  driver = "bridge"
+}
+
+resource "docker_volume" "shared_volume" {
+  name = "shared_volume"
+}
+
+resource "docker_image" "img" {
+  name = "ansible-04-hw:ubuntu"
+  build {
+    context = "./"
+    dockerfile = "Dockerfile"
+  }
+  triggers = {
+    dockerfile_hash = filebase64sha256("${path.module}/Dockerfile")
+  }
+}
+
+locals { 
+  # vms = values(var.vms)
+  vms_with_index = { for idx, vm in var.vms : vm.vm_name => {
+      image_id = docker_image.img.image_id
+      vm       = vm
+      index    = idx    
+    } 
+  }
+}
+
+resource "docker_container" "vms" {
+  depends_on = [ docker_image.img ]
+  for_each = local.vms_with_index
+
+  image = each.value.image_id
+  name = each.value.vm.vm_name
+  
+  memory = each.value.vm.ram * 1024
+
+  hostname = each.value.vm.vm_name
+  networks_advanced {
+    name = docker_network.public_network.id
+  }
+
+  dynamic "ports" {
+    for_each = lookup(each.value.vm, "ports", []) 
+    content {
+      internal = ports.value
+      external = ports.value == 22 ? 2222 + each.value.index : ports.value
+    }
+  }
+  mounts {
+    type   = "bind"
+    source = "${path.cwd}/ssh-key/id_ed25519.pub"
+    target = "/key.pub"
+    read_only = true
+  }
+
+  command = ["/bin/bash", "-c", "cat /key.pub > /home/ubuntu/.ssh/authorized_keys && /usr/sbin/sshd -D"]
+}
+
+resource "local_file" "ansible_inventory" {
+  depends_on = [ docker_container.vms ]
+  #vms_with_index
+  content = templatefile("hc_host.tftpl",
+    { root = [ for k in docker_container.vms : { 
+        "hostname" = k.hostname,
+        "port" = k.ports[0].external,
+        "username" = "ubuntu",
+        "ip_address" = k.network_data[0].ip_address, 
+        "nat_ip_address" = "127.0.0.1" } ] 
+      nat_ip_address = docker_container.vms["jumphost"].network_data[0].ip_address
+    }
+  )
+  filename = "../bootstrap/inventory/prod.yml"
+}
+
+output "docker_image" {
+  value = [for e in local.vms_with_index: {
+    instance_id: e.image_id, 
+    instance_name: e.vm.vm_name
+  }]
+}

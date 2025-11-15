@@ -1,0 +1,29 @@
+terraform {
+  required_providers {
+    yandex = {
+      source = "yandex-cloud/yandex"
+    }
+  }
+  required_version = ">=1.8.4"
+}
+
+provider "yandex" {
+  #token     = var.token
+  cloud_id  = var.cloud_id
+  folder_id = var.folder_id
+  zone      = var.default_zone
+  service_account_key_file = "../cloud-key/key.json"
+}
+
+# terraform {
+#   required_providers {
+#     docker = {
+#       source  = "kreuzwerker/docker"
+#       version = "~> 3.0.2"
+#     }
+#   }
+# }
+
+# provider "docker" {
+#   host = "unix:///var/run/docker.sock"
+# }

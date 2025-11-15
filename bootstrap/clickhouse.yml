@@ -1,0 +1,11 @@
+---
+- name: Install clickhouse
+  hosts: clickhouse
+  #tags: ["clickhouse", "clickhouse.install"]
+  gather_facts: true
+  vars:
+    clickhouse_listen_host_custom: "{{ ansible_all_ipv4_addresses }}"
+    clickhouse_users_custom: "{{ clickhouse.clickhouse_users_custom }}"
+    clickhouse_dbs_custom: "name: {{ clickhouse.database }}"
+  roles:
+    - clickhouse
